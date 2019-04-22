@@ -20,17 +20,6 @@ namespace VLCAutoChromecast
         private readonly static string VLC_MINIMIZED_ARGS = "--qt-start-minimized";
 #endif
 
-        // Start and controll VLC program
-        public static void VlcCommander(String vlc_path,String args)
-        {
-            Process process = null;
-
-            ProcessStartInfo startInfo = new ProcessStartInfo(vlc_path);
-            startInfo.Arguments = args;
-            process = Process.Start(startInfo);
-            process.WaitForExit();
-        }
-
         public static void GeneratePlaylist()
         {
             string current_directory = Directory.GetCurrentDirectory();
@@ -108,24 +97,13 @@ namespace VLCAutoChromecast
                     {
                         GeneratePlaylist();
 
-                        chromecast_ip = "192.168.20.162";
-                        chromecast_vlc_args = "--sout \"#chromecast\" --sout-chromecast-ip=" + chromecast_ip + " --demux-filter=demux_chromecast";
-                        Thread t = new Thread(() => VlcCommander(
-                                                                    vlc_path,
-                                                                    VLC_MINIMIZED_ARGS + " \"" + current_directory + Path.DirectorySeparatorChar + "Playlist.m3u\" " + chromecast_vlc_args)
-                                                                 );
-                        t.Start();
+                        Process process = null;
 
-                        Thread.Sleep(50);
-
-                        chromecast_ip = "192.168.20.118";
-                        chromecast_vlc_args = "--sout \"#chromecast\" --sout-chromecast-ip=" + chromecast_ip + " --demux-filter=demux_chromecast";
-                        Thread t2 = new Thread(() => VlcCommander(
-                                                                    vlc_path,
-                                                                    VLC_MINIMIZED_ARGS + " \"" + current_directory + Path.DirectorySeparatorChar + "Playlist.m3u\" " + chromecast_vlc_args)
-                                                                 );
-                        t2.Start();
-                        t.Join();
+                        ProcessStartInfo startInfo = new ProcessStartInfo(vlc_path);
+                        startInfo.Arguments = VLC_MINIMIZED_ARGS + " \"" + current_directory + Path.DirectorySeparatorChar + "Playlist.m3u\" " + chromecast_vlc_args;
+                        startInfo.UseShellExecute = false;
+                        process = Process.Start(startInfo);
+                        process.WaitForExit();
                     }
                 }
                 else
