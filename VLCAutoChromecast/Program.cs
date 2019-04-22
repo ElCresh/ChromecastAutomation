@@ -9,10 +9,11 @@ namespace VLCAutoChromecast
 {
     class Program
     {
-        private readonly static string MEDIA_PATH = "media\\";
+        private readonly static string MEDIA_PATH = "media" + Path.DirectorySeparatorChar;
         private readonly static string VLC_PATH_X64 = "C:\\Program Files\\VideoLAN\\VLC\\vlc.exe";
         private readonly static string VLC_PATH_X86 = "C:\\Program Files(x86)\\VideoLAN\\VLC\\vlc.exe";
         private readonly static string VLC_PATH_WXP = "C:\\Programmi\\VideoLAN\\VLC\\vlc.exe";
+        private readonly static string VLC_PATH_UBT = "/usr/bin/vlc";
 #if DEBUG
         private readonly static string VLC_MINIMIZED_ARGS = "-I rc --verbose=1 --qt-start-minimized";
 #else
@@ -68,7 +69,11 @@ namespace VLCAutoChromecast
 
             if (File.Exists("settings.xml"))
             {
-                if (File.Exists(VLC_PATH_X64))
+                if (File.Exists(VLC_PATH_UBT))
+                {
+                    vlc_path = VLC_PATH_UBT;
+                }
+                else if (File.Exists(VLC_PATH_X64))
                 {
                     vlc_path = VLC_PATH_X64;
                 }
