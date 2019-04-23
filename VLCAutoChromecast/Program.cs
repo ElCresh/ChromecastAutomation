@@ -50,7 +50,7 @@ namespace VLCAutoChromecast
         {
             Console.WriteLine("************************");
             Console.WriteLine("* Chromecast Automator *");
-            Console.WriteLine("* Notiosoft - Rev. 1.0 *");
+            Console.WriteLine("* Notiosoft - Ver. 1.1 *");
             Console.WriteLine("************************");
 
             string current_directory = Directory.GetCurrentDirectory();
@@ -101,7 +101,6 @@ namespace VLCAutoChromecast
 
                         ProcessStartInfo startInfo = new ProcessStartInfo(vlc_path);
                         startInfo.Arguments = VLC_MINIMIZED_ARGS + " \"" + current_directory + Path.DirectorySeparatorChar + "Playlist.m3u\" " + chromecast_vlc_args;
-                        startInfo.UseShellExecute = false;
                         process = Process.Start(startInfo);
                         process.WaitForExit();
                     }
