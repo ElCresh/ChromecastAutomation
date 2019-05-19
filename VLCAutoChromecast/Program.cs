@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Xml;
 using System.Threading;
 using System.Runtime.InteropServices;
+using System.Net.NetworkInformation;
 
 namespace VLCAutoChromecast
 {
@@ -46,15 +47,63 @@ namespace VLCAutoChromecast
             File.WriteAllLines(current_directory + Path.DirectorySeparatorChar + "Playlist.m3u", lines);
         }
 
+        public static void VlcKiller()
+        {
+            foreach (var process_vlc in Process.GetProcessesByName("vlc"))
+            {
+                process_vlc.Kill();
+            }
+        }
+
+        public static void VlcRunner(String chromecast_ip, String chromecast_vlc_args)
+        {
+            string current_directory = Directory.GetCurrentDirectory();
+            string vlc_path = "";
+
+            if (File.Exists(VLC_PATH_UBT))
+            {
+                vlc_path = VLC_PATH_UBT;
+            }
+            else if (File.Exists(VLC_PATH_X64))
+            {
+                vlc_path = VLC_PATH_X64;
+            }
+            else if (File.Exists(VLC_PATH_X86))
+            {
+                vlc_path = VLC_PATH_X86;
+            }
+            else if (File.Exists(VLC_PATH_WXP))
+            {
+                vlc_path = VLC_PATH_WXP;
+            }
+
+            if (vlc_path != "")
+            {
+                while (true)
+                {
+                    GeneratePlaylist();
+
+                    Process process = null;
+
+                    ProcessStartInfo startInfo = new ProcessStartInfo(vlc_path);
+                    startInfo.Arguments = VLC_MINIMIZED_ARGS + " \"" + current_directory + Path.DirectorySeparatorChar + "Playlist.m3u\" " + chromecast_vlc_args;
+                    process = Process.Start(startInfo);
+                    process.WaitForExit();
+                }
+            }
+        }
+
         static void Main(string[] args)
         {
             Console.WriteLine("************************");
             Console.WriteLine("* Chromecast Automator *");
-            Console.WriteLine("* Notiosoft - Ver. 1.1 *");
+            Console.WriteLine("* Notiosoft - Ver. 1.2 *");
             Console.WriteLine("************************");
 
-            string current_directory = Directory.GetCurrentDirectory();
             string vlc_path = "";
+            Boolean is_running = false;
+            Boolean is_online = false;
+            Ping ping = new Ping();
 
             if (File.Exists("settings.xml"))
             {
@@ -78,10 +127,7 @@ namespace VLCAutoChromecast
                 if (vlc_path != "")
                 {
                     // Terminating all existing vlc istances
-                    foreach (var process_vlc in Process.GetProcessesByName("vlc"))
-                    {
-                        process_vlc.Kill();
-                    }
+                    VlcKiller();
 
                     XmlDocument doc = new XmlDocument();
                     doc.Load("settings.xml");
@@ -93,17 +139,49 @@ namespace VLCAutoChromecast
                     Console.WriteLine("> Avvio stream chromecast");
                     Console.WriteLine("\nPer interrompere l'esecuzione chiudere la  finestra...");
 
+                    Thread t = new Thread(() => VlcRunner(chromecast_ip, chromecast_vlc_args));
+                    t.Start();
+                    is_running = true;
+
                     while (true)
                     {
-                        GeneratePlaylist();
+                        
+                        try
+                        {
+                            PingReply pingReply = ping.Send(chromecast_ip);
 
-                        Process process = null;
+                            if (pingReply.Status == IPStatus.Success)
+                            {
+                                is_online = true;
+                            }
+                            else
+                            {
+                                is_online = false;
+                            }
+                        }
+                        catch (PingException e)
+                        {
+                            is_online = false;
+                        }
 
-                        ProcessStartInfo startInfo = new ProcessStartInfo(vlc_path);
-                        startInfo.Arguments = VLC_MINIMIZED_ARGS + " \"" + current_directory + Path.DirectorySeparatorChar + "Playlist.m3u\" " + chromecast_vlc_args;
-                        process = Process.Start(startInfo);
-                        process.WaitForExit();
+                        if (is_online) {
+                            if (!is_running)
+                            {
+                                t = new Thread(() => VlcRunner(chromecast_ip, chromecast_vlc_args));
+                                t.Start();
+                                is_running = true;
+                            }
+                        }
+                        else
+                        {
+                            t.Abort();
+                            VlcKiller();
+                            is_running = false;
+                        }
+
+                        Thread.Sleep(1000);
                     }
+
                 }
                 else
                 {
