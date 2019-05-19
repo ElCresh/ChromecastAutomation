@@ -36,9 +36,17 @@ namespace VLCAutoChromecast
             // Generating new playlist
             foreach (string media_file in media_files)
             {
-                lines[index] = "#EXTINF:-1,.";
-                lines[index + 1] = current_directory + Path.DirectorySeparatorChar + media_file;
-                index += 2;
+                if (
+                    !media_file.Equals("media" + Path.DirectorySeparatorChar + "STOP") &&
+                    !media_file.Equals("media" + Path.DirectorySeparatorChar + "stop") &&
+                    !media_file.Equals("media" + Path.DirectorySeparatorChar + "STOP.ntsf") &&
+                    !media_file.Equals("media" + Path.DirectorySeparatorChar + "stop.ntsf")
+                )
+                {
+                    lines[index] = "#EXTINF:-1,.";
+                    lines[index + 1] = current_directory + Path.DirectorySeparatorChar + media_file;
+                    index += 2;
+                }
             }
 
             lines[index] = "vlc://quit";
@@ -101,8 +109,10 @@ namespace VLCAutoChromecast
             Console.WriteLine("************************");
 
             string vlc_path = "";
-            Boolean is_running = false;
-            Boolean is_online = false;
+            bool is_running = false;
+            bool is_online = false;
+            bool is_stop_requested = false;
+            Thread t = null;
             Ping ping = new Ping();
 
             if (File.Exists("settings.xml"))
@@ -139,13 +149,21 @@ namespace VLCAutoChromecast
                     Console.WriteLine("> Avvio stream chromecast");
                     Console.WriteLine("\nPer interrompere l'esecuzione chiudere la  finestra...");
 
-                    Thread t = new Thread(() => VlcRunner(chromecast_ip, chromecast_vlc_args));
-                    t.Start();
-                    is_running = true;
-
                     while (true)
                     {
-                        
+                        if(
+                            File.Exists("media" + Path.DirectorySeparatorChar + "STOP") ||
+                            File.Exists("media" + Path.DirectorySeparatorChar + "stop") ||
+                            File.Exists("media" + Path.DirectorySeparatorChar + "STOP.ntsf") ||
+                            File.Exists("media" + Path.DirectorySeparatorChar + "stop.ntsf"))
+                        {
+                            is_stop_requested = true;
+                        }
+                        else
+                        {
+                            is_stop_requested = false;
+                        }
+
                         try
                         {
                             PingReply pingReply = ping.Send(chromecast_ip);
@@ -164,7 +182,7 @@ namespace VLCAutoChromecast
                             is_online = false;
                         }
 
-                        if (is_online) {
+                        if (is_online && !is_stop_requested) {
                             if (!is_running)
                             {
                                 t = new Thread(() => VlcRunner(chromecast_ip, chromecast_vlc_args));
@@ -174,9 +192,12 @@ namespace VLCAutoChromecast
                         }
                         else
                         {
-                            t.Abort();
-                            VlcKiller();
-                            is_running = false;
+                            if (is_running)
+                            {
+                                t.Abort();
+                                VlcKiller();
+                                is_running = false;
+                            }
                         }
 
                         Thread.Sleep(1000);
